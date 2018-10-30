@@ -1,6 +1,5 @@
 # data
-topics2017.xml
-clinicaltrials_xml.xml
+*.xml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
