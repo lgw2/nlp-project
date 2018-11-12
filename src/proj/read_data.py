@@ -1,6 +1,7 @@
 import os
 import xml.etree.cElementTree as et
 import re
+import pandas as pd
 
 
 def import_trials():
@@ -52,17 +53,21 @@ def import_topics():
     return topics
 
 
-trials = import_trials()
-print(len(trials))
-
-topics = import_topics()
-print(topics)
-
-count = 0
-for trial in trials:
-    for topic in topics:
-        disease = topic[0]
-        print(disease)
-        if disease in trial:
-            count = count + 1
-print(count)
+def count_usages(trials, topics):
+    """
+    Given a set of trials and topics, return a dataset giving counts of times
+    diseases, genes, demographics, or other value occurred in each pairing of
+    trials and topics.
+    """
+    trials_rows = []
+    for trial in trials:
+        counts = []
+        for topic in topics:
+            disease = topic[0]
+            count = 0
+            if disease in trial:
+                count = count + 1
+            counts.append(count)
+        trials_rows.append(counts)
+    df = pd.DataFrame(trials_rows)
+    return(df)
