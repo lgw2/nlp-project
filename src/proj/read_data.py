@@ -1,7 +1,7 @@
-import sys
 import os
 import xml.etree.cElementTree as et
 import re
+
 
 def import_trials():
     """
@@ -9,7 +9,7 @@ def import_trials():
     """
 
     # read all trial source files (*.xml) in trial data sub-directories
-	# total num of files must be 241006
+    # total num of files must be 241006
     trial_files = []
     for root, dirs, files in os.walk('../../data/clinicaltrials_txt/'):
         if not re.match(r"\d+", root.split(os.sep)[-1]):
@@ -18,14 +18,13 @@ def import_trials():
             if not file.endswith('txt'):
                 continue
             trial_files.append(os.path.join(root, file))
-    print('INFO', '{} trials found'. \
-               format(len(trial_files)))
+    print('INFO', '{} trials found'.format(len(trial_files)))
 
     trials = []
     for i, file in enumerate(trial_files):
-        #print('INFO', 'parsing a trial file {}'.format(file))
+        # print('INFO', 'parsing a trial file {}'.format(file))
         with open(file, 'r') as myfile:
-            data=myfile.read().replace('\n', '')
+            data = myfile.read().replace('\n', '')
         trials.append(data.lower())
 
     return trials
@@ -42,9 +41,8 @@ def import_topics():
     """
 
     topics = []
-    parsedXML = et.parse( "../../data/topics2017.xml")
+    parsedXML = et.parse("../../data/topics2017.xml")
     for node in parsedXML.getroot():
-        number = node.attrib.get('number')
         disease = getvalueofnode(node.find('disease')).lower()
         gene = getvalueofnode(node.find('gene')).lower()
         demographic = getvalueofnode(node.find('demographic')).lower()
