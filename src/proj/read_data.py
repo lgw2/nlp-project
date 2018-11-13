@@ -25,7 +25,7 @@ def import_trials():
     for i, file in enumerate(trial_files):
         # print('INFO', 'parsing a trial file {}'.format(file))
         with open(file, 'r') as myfile:
-            data = myfile.read().replace('\n', '')
+            data = myfile.read()
         trials.append(data.lower())
 
     return trials
@@ -55,19 +55,40 @@ def import_topics():
 
 def count_usages(trials, topics):
     """
-    Given a set of trials and topics, return a dataset giving counts of times
+    Given a set of trials and topics, return a dataset giving score based
+    number of times of times
     diseases, genes, demographics, or other value occurred in each pairing of
     trials and topics.
     """
     trials_rows = []
     for trial in trials:
-        counts = []
+        scores = []
         for topic in topics:
             disease = topic[0]
-            count = 0
-            if disease in trial:
-                count = count + 1
-            counts.append(count)
-        trials_rows.append(counts)
+            genes = topic[1].split(', ')
+            demographic = topics[3]
+            other = topics[4]
+            score = trial.count(disease)
+            match = True
+            if score == 0:
+                match = False
+            score_before = score
+            for gene in genes:
+                score = score + trial.count(gene)
+            if score == score_before:
+                match = False
+            if match is False:
+                score = 0
+            scores.append(score)
+        trials_rows.append(scores)
     df = pd.DataFrame(trials_rows)
     return(df)
+
+
+def print_trial(trials, row_index):
+    """
+    Save trial to text file.
+    """
+    file_name = "trial" + str(row_index) + '.txt'
+    with open(file_name, "w") as text_file:
+        text_file.write(trials[row_index])
