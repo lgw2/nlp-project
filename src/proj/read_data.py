@@ -110,13 +110,14 @@ def count_usages(trials, topics):
             score_before = score
             for gene in genes:
                 score = score + trial.count(gene)
-            if score == score_before:
-                match = False
-            score_before = score
+                if score == score_before:
+                    match = False
+                score_before = score
             for cond in other_conditions:
                 score = score + trial.count(cond)
-            if score == score_before:
-                match = False
+                if score == score_before:
+                    match = False
+                score_before = score
             if match is False:
                 score = 0
             scores.append(score)
