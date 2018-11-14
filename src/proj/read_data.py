@@ -53,6 +53,58 @@ def import_topics():
     return topics
 
 
+def get_trial_gender(trial):
+    trial_gender = trial.split(
+        'eligibility:\ngender: '
+    )[1].split('\nage:')[0]
+    if trial_gender == 'all':
+        trial_gender = ['female', 'male']
+    else:
+        trial_gender = [trial_gender]
+    return(trial_gender)
+
+
+def get_trial_age_to(trial):
+    trial_age = trial.split(
+        '\nage: '
+    )[1].split('\n')[0]
+    if trial_age == '20-40years':
+        trial_age = '20 years to 40 years'
+    age_to = trial_age.split(' to ')[1].split(' year')[0]
+    if (age_to == 'n/a') or (age_to == 'any'):
+        age_to = 150
+    elif ('month' in age_to) or ('day' in age_to) or\
+            ('week' in age_to) or ('hour' in age_to) or\
+            ('minute' in age_to):
+        age_to = 2
+    else:
+        age_to = int(age_to)
+    return(age_to)
+
+
+def get_trial_age_from(trial):
+    trial_age = trial.split(
+        '\nage: '
+    )[1].split('\n')[0]
+    age_from = trial_age.split(' to ')[0].split(' year')[0].split('-')[0]
+    if (age_from == 'n/a') or ('week' in age_from) or\
+            ('month' in age_from) or ('day' in age_from) or\
+            (age_from == 'any'):
+        age_from = 0
+    else:
+        age_from = int(age_from)
+    return(age_from)
+
+
+def get_trial_exclusion(trial):
+    trial_sections = trial.split('\n\n        exclusion criteria:\n\n')
+    if len(trial_sections) == 2:
+        trial_exclusion = trial_sections[1]
+    else:
+        trial_exclusion = ""
+    return(trial_exclusion)
+
+
 def count_usages(trials, topics):
     """
     Given a set of trials and topics, return a dataset giving score based
@@ -63,34 +115,10 @@ def count_usages(trials, topics):
     trials_rows = []
     for trial in trials:
         scores = []
-        trial_gender = trial.split(
-            'eligibility:\ngender: '
-        )[1].split('\nage:')[0]
-        if trial_gender == 'all':
-            trial_gender = ['female', 'male']
-        else:
-            trial_gender = [trial_gender]
-        trial_age = trial.split(
-            '\nage: '
-        )[1].split('\n')[0]
-        age_from = trial_age.split(' to ')[0].split(' year')[0].split('-')[0]
-        if (age_from == 'n/a') or ('week' in age_from) or\
-                ('month' in age_from) or ('day' in age_from) or\
-                (age_from == 'any'):
-            age_from = 0
-        else:
-            age_from = int(age_from)
-        if trial_age == '20-40years':
-            trial_age = '20 years to 40 years'
-        age_to = trial_age.split(' to ')[1].split(' year')[0]
-        if (age_to == 'n/a') or (age_to == 'any'):
-            age_to = 150
-        elif ('month' in age_to) or ('day' in age_to) or\
-                ('week' in age_to) or ('hour' in age_to) or\
-                ('minute' in age_to):
-            age_to = 2
-        else:
-            age_to = int(age_to)
+        trial_gender = get_trial_gender(trial)
+        age_from = get_trial_age_from(trial)
+        age_to = get_trial_age_to(trial)
+        trial_exclusion = get_trial_exclusion(trial)
         for topic in topics:
             disease = topic[0]
             genes = topic[1].split(', ')
@@ -110,14 +138,13 @@ def count_usages(trials, topics):
             score_before = score
             for gene in genes:
                 score = score + trial.count(gene)
-                if score == score_before:
-                    match = False
-                score_before = score
-            for cond in other_conditions:
-                score = score + trial.count(cond)
-                if score == score_before:
-                    match = False
-                score_before = score
+            if score == score_before:
+                match = False
+            score_before = score
+            if other_conditions != ['none']:
+                for cond in other_conditions:
+                    if cond in trial_exclusion:
+                        match = False
             if match is False:
                 score = 0
             scores.append(score)
