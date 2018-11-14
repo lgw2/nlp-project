@@ -105,7 +105,7 @@ def get_trial_exclusion(trial):
     return(trial_exclusion)
 
 
-def count_usages(trials, topics):
+def compute_baseline_score(trials, topics):
     """
     Given a set of trials and topics, return a dataset giving score based
     number of times of times
