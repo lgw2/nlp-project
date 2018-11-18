@@ -22,13 +22,19 @@ def import_trials():
     print('INFO', '{} trials found'.format(len(trial_files)))
 
     trials = []
+    trial_names = []
     for i, file in enumerate(trial_files):
-        # print('INFO', 'parsing a trial file {}'.format(file))
         with open(file, 'r') as myfile:
             data = myfile.read()
         trials.append(data.lower())
+        trial_names.append(file[40:-4])
 
-    return trials
+    df = pd.DataFrame({
+                       'trial_name': trial_names,
+                       'trial': trials
+                      })
+
+    return df
 
 
 def getvalueofnode(node):
@@ -105,7 +111,21 @@ def get_trial_exclusion(trial):
     return(trial_exclusion)
 
 
-def compute_baseline_score(trials, topics):
+def match_gender(gender, trial_gender, match):
+    if gender not in trial_gender:
+        return(False)
+    else:
+        return(match)
+
+
+def match_age(age, age_from, age_to, match):
+    if (age < age_from) or (age > age_to):
+        return(False)
+    else:
+        return(match)
+
+
+def compute_baseline_scores(trials, topics):
     """
     Given a set of trials and topics, return a dataset giving score based
     number of times of times
@@ -113,7 +133,7 @@ def compute_baseline_score(trials, topics):
     trials and topics.
     """
     trials_rows = []
-    for trial in trials:
+    for trial in trials['trial']:
         scores = []
         trial_gender = get_trial_gender(trial)
         age_from = get_trial_age_from(trial)
@@ -129,10 +149,8 @@ def compute_baseline_score(trials, topics):
             age = int(demographic.split('-')[0])
             gender = demographic.split(' ')[1]
             match = True
-            if gender not in trial_gender:
-                match = False
-            if (age < age_from) or (age > age_to):
-                match = False
+            match = match_gender(gender, trial_gender, match)
+            match = match_age(age, age_from, age_to, match)
             if score == 0:
                 match = False
             score_before = score
@@ -150,6 +168,7 @@ def compute_baseline_score(trials, topics):
             scores.append(score)
         trials_rows.append(scores)
     df = pd.DataFrame(trials_rows)
+    df['trial'] = trials['trial_name']
     return(df)
 
 
@@ -160,3 +179,40 @@ def print_trial(trials, row_index):
     file_name = "trial" + str(row_index) + '.txt'
     with open(file_name, "w") as text_file:
         text_file.write(trials[row_index])
+
+
+def import_ground_truth():
+    file = "../../data/ground_truth.txt"
+    data = pd.read_csv(file, sep=' ', header=None,
+                       names=['topic', '1', 'trial', '3'])
+    return(data[['topic', 'trial']])
+
+
+def generate_baseline_data(baseline, ground_truth):
+    topics = []
+    counts = []
+    for topic in range(1, 31):
+        count = 0
+        for score in (set(baseline[topic-1]) - set([0])):
+            trials = [x for x in baseline[baseline[topic-1] == score]['trial']]
+            count = count + len(trials)
+        topics.append(topic)
+        counts.append(count)
+    return(pd.DataFrame({
+                         'topic': topics,
+                         'matches': counts
+                         }))
+
+
+def compute_baseline_evaluation(baseline_data):
+    prec5 = baseline_data['matches'].sum()/(5*(baseline_data.shape[0]-1))
+    prec10 = baseline_data['matches'].sum()/(10*(baseline_data.shape[0]-1))
+    prec15 = baseline_data['matches'].sum()/(15*(baseline_data.shape[0]-1))
+    # precision
+    # recall
+    evaluation_scores = {
+                         'prec5': prec5,
+                         'prec10': prec10,
+                         'prec15': prec15
+                        }
+    return(evaluation_scores)
