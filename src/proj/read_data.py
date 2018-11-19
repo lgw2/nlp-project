@@ -2,6 +2,8 @@ import os
 import xml.etree.cElementTree as et
 import re
 import pandas as pd
+from Bio import Entrez
+Entrez.email = "lgw2@uw.edu"
 
 
 def import_trials():
@@ -204,15 +206,52 @@ def generate_baseline_data(baseline, ground_truth):
                          }))
 
 
-def compute_baseline_evaluation(baseline_data):
+def compute_baseline_evaluation(baseline_data, ground_truth):
     prec5 = baseline_data['matches'].sum()/(5*(baseline_data.shape[0]-1))
     prec10 = baseline_data['matches'].sum()/(10*(baseline_data.shape[0]-1))
     prec15 = baseline_data['matches'].sum()/(15*(baseline_data.shape[0]-1))
-    # precision
+    overall_precision = 1
+    overall_recall = baseline_data['matches'].sum()/ground_truth.shape[0]
     # recall
     evaluation_scores = {
                          'prec5': prec5,
                          'prec10': prec10,
-                         'prec15': prec15
+                         'prec15': prec15,
+                         'overall_precision': overall_precision,
+                         'overall_recall': overall_recall
                         }
     return(evaluation_scores)
+
+
+def get_gene_aliases(gene):
+    print('Gene is: {}'.format(gene))
+    handle = Entrez.esearch(db="gene",
+                            term="(" + gene +
+                            "[Gene Name]) AND homo sapiens[Organism]")
+    data = Entrez.read(handle)
+    ids = data['IdList']
+    print('ids are: {}'.format(ids))
+    aliases = []
+    for i in ids:
+        handle = Entrez.epost(db="gene", id=i)
+        result = Entrez.read(handle)
+        webEnv = result["WebEnv"]
+        queryKey = result["QueryKey"]
+        data = Entrez.esummary(db="gene", webenv=webEnv, query_key=queryKey)
+        annotations = Entrez.read(data)
+        other_aliases = annotations['Document' +
+                                    'SummarySet']['Document' +
+                                                  'Summary'][0]['OtherAliases']
+        print('other aliases are: {}'.format(other_aliases))
+        aliases.append(other_aliases)
+    return(aliases)
+
+
+def expand_genes(topics):
+    expanded = []
+    for topic in topics:
+        for gene in [y.split(' ')[0] for y
+                     in [x for x in topic[1].split(', ')]]:
+            expanded_gene_names = [gene] + get_gene_aliases(gene)
+        expanded.append(expanded_gene_names)
+    return(expanded)
