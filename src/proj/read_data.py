@@ -127,6 +127,39 @@ def match_age(age, age_from, age_to, match):
         return(match)
 
 
+def get_disease(topic):
+    return(topic[0])
+
+
+def get_genes(topic):
+    return(topic[1].split(', '))
+
+
+def get_demographic(topic):
+    return(int(topic[2].split('-')[0]), topic[2].split(' ')[1])
+
+
+def get_other_conditions(topic):
+    return(topic[3].split(', '))
+
+
+def match_genes(genes, trial, score, match):
+    score_before = score
+    for gene in genes:
+        score = score + trial.count(gene)
+    if score == score_before:
+        match = False
+    return(score, match)
+
+
+def match_other_conds(other_conditions, trial_exclusion, match):
+    if other_conditions != ['none']:
+        for cond in other_conditions:
+            if cond in trial_exclusion:
+                match = False
+    return(match)
+
+
 def compute_baseline_scores(trials, topics):
     """
     Given a set of trials and topics, return a dataset giving score based
@@ -142,29 +175,19 @@ def compute_baseline_scores(trials, topics):
         age_to = get_trial_age_to(trial)
         trial_exclusion = get_trial_exclusion(trial)
         for topic in topics:
-            disease = topic[0]
-            genes = topic[1].split(', ')
-            demographic = topic[2]
-            other = topic[3]
-            other_conditions = other.split(', ')
+            disease = get_disease(topic)
+            genes = get_genes(topic)
+            age, gender = get_demographic(topic)
+            other_conditions = get_other_conditions(topic)
             score = trial.count(disease)
-            age = int(demographic.split('-')[0])
-            gender = demographic.split(' ')[1]
             match = True
             match = match_gender(gender, trial_gender, match)
             match = match_age(age, age_from, age_to, match)
             if score == 0:
                 match = False
-            score_before = score
-            for gene in genes:
-                score = score + trial.count(gene)
-            if score == score_before:
-                match = False
-            score_before = score
-            if other_conditions != ['none']:
-                for cond in other_conditions:
-                    if cond in trial_exclusion:
-                        match = False
+            score, match = match_genes(genes, trial, score, match)
+            match = match_other_conds(other_conditions, trial_exclusion,
+                                      match)
             if match is False:
                 score = 0
             scores.append(score)
