@@ -152,6 +152,16 @@ def match_genes(genes, trial, score, match):
     return(score, match)
 
 
+def match_expanded_genes(genes, expanded_gene_names, trial, score, match):
+    score_before = score
+    for gene in genes:
+        for expanded_name in expanded_gene_names[gene]:
+            score = score + trial.count(expanded_name)
+    if score == score_before:
+        match = False
+    return(score, match)
+
+
 def match_other_conds(other_conditions, trial_exclusion, match):
     if other_conditions != ['none']:
         for cond in other_conditions:
@@ -192,18 +202,60 @@ def compute_baseline_scores(trials, topics):
                 score = 0
             scores.append(score)
         trials_rows.append(scores)
+    df = d.DataFrame(trials_rows)
+    df['trial'] = trials['trial_name']
+    return(df)
+
+
+def compute_expanded_scores(trials, topics, expanded_gene_names):
+    """
+    Given a set of trials and topics, return a dataset giving score based
+    number of times of times EXPANDED
+    diseases, genes, demographics, or other value occurred in each pairing of
+    trials and topics.
+    """
+    trials_rows = []
+    for trial in trials['trial']:
+        scores = []
+        trial_gender = get_trial_gender(trial)
+        age_from = get_trial_age_from(trial)
+        age_to = get_trial_age_to(trial)
+        trial_exclusion = get_trial_exclusion(trial)
+        for topic in topics:
+            disease = get_disease(topic)
+            genes = get_genes(topic)
+            age, gender = get_demographic(topic)
+            other_conditions = get_other_conditions(topic)
+            score = trial.count(disease)
+            match = True
+            match = match_gender(gender, trial_gender, match)
+            match = match_age(age, age_from, age_to, match)
+            if score == 0:
+                match = False
+            score, match = match_expanded_genes(genes, expanded_gene_names,
+                                                trial, score, match)
+            match = match_other_conds(other_conditions, trial_exclusion,
+                                      match)
+            if match is False:
+                score = 0
+            scores.append(score)
+        trials_rows.append(scores)
     df = pd.DataFrame(trials_rows)
     df['trial'] = trials['trial_name']
     return(df)
 
 
-def print_trial(trials, row_index):
+
+def print_trial(trials, trial_name):
     """
     Save trial to text file.
     """
-    file_name = "trial" + str(row_index) + '.txt'
+    file_name = "trial" + trial_name + '.txt'
+    print(file_name)
     with open(file_name, "w") as text_file:
-        text_file.write(trials[row_index])
+        text_file.write(
+              trials[trials['trial_name'] == trial_name]['trial'].values[0]
+                       )
 
 
 def import_ground_truth():
@@ -213,47 +265,92 @@ def import_ground_truth():
     return(data[['topic', 'trial']])
 
 
+
+def generate_ordered_trials(baseline, ground_truth, topic):
+    trials_list = []
+    scores = set(baseline[topic-1])-set([0])
+    scores = [x for x in scores]
+    scores.sort(reverse=True)
+    for score in scores:
+        trials_at_score = [x for x in baseline[baseline[topic-1] ==\
+                  score]['trial']]
+        trials_list.extend(trials_at_score)
+        if len(trials_list) >= 15:
+            break
+    trials_list = trials_list[:15]
+    num_missing_trials = 15 - len(trials_list)
+    to_add = baseline.sample(
+                    frac=num_missing_trials/baseline.shape[0],
+                    random_state=1
+                   )['trial'].values
+    trials_list.extend(to_add)
+    trials_list = trials_list[:15]
+    return(trials_list)
+
+
+def find_num_correct_trials(trials_list, filtered_ground_truth):
+    return(len(set(trials_list).intersection(set(filtered_ground_truth))))
+
+
 def generate_baseline_data(baseline, ground_truth):
     topics = []
-    counts = []
+    true_positives_5 = []
+    false_positives_5 = []
+    true_positives_10 = []
+    false_positives_10 = []
+    true_positives_15 = []
+    false_positives_15 = []
     for topic in range(1, 31):
-        count = 0
-        for score in (set(baseline[topic-1]) - set([0])):
-            trials = [x for x in baseline[baseline[topic-1] == score]['trial']]
-            count = count + len(trials)
         topics.append(topic)
-        counts.append(count)
+        print(topic)
+        filtered_ground_truth =\
+               ground_truth[ground_truth['topic'] == topic]['trial']
+        trials = generate_ordered_trials(baseline, ground_truth, topic)
+        first_5 = trials[:5]
+        first_10 = trials[:10]
+        first_15 = trials[:15]
+        tp5 = find_num_correct_trials(first_5, filtered_ground_truth)
+        fp5 = 5 - tp5
+        tp10 = find_num_correct_trials(first_10, filtered_ground_truth)
+        fp10 = 10 - tp10
+        tp15 = find_num_correct_trials(first_15, filtered_ground_truth)
+        fp15 = 15 - tp15
+        true_positives_5.append(tp5)
+        false_positives_5.append(fp5)
+        true_positives_10.append(tp10)
+        false_positives_10.append(fp10)
+        true_positives_15.append(tp15)
+        false_positives_15.append(fp15)
     return(pd.DataFrame({
                          'topic': topics,
-                         'matches': counts
+                         'true_positives_5': true_positives_5,
+                         'false_positives_5': false_positives_5,
+                         'true_positives_10': true_positives_10,
+                         'false_positives_10': false_positives_10,
+                         'true_positives_15': true_positives_15,
+                         'false_positives_15': false_positives_15
                          }))
 
 
 def compute_baseline_evaluation(baseline_data, ground_truth):
-    prec5 = baseline_data['matches'].sum()/(5*(baseline_data.shape[0]-1))
-    prec10 = baseline_data['matches'].sum()/(10*(baseline_data.shape[0]-1))
-    prec15 = baseline_data['matches'].sum()/(15*(baseline_data.shape[0]-1))
-    overall_precision = 1
-    overall_recall = baseline_data['matches'].sum()/ground_truth.shape[0]
-    # recall
+    num_topics = 29
+    prec5 = baseline_data['true_positives_5'].sum()/(5*num_topics)
+    prec10 = baseline_data['true_positives_10'].sum()/(10*num_topics)
+    prec15 = baseline_data['true_positives_15'].sum()/(15*num_topics)
     evaluation_scores = {
                          'prec5': prec5,
                          'prec10': prec10,
                          'prec15': prec15,
-                         'overall_precision': overall_precision,
-                         'overall_recall': overall_recall
                         }
     return(evaluation_scores)
 
 
 def get_gene_aliases(gene):
-    print('Gene is: {}'.format(gene))
     handle = Entrez.esearch(db="gene",
                             term="(" + gene +
                             "[Gene Name]) AND homo sapiens[Organism]")
     data = Entrez.read(handle)
     ids = data['IdList']
-    print('ids are: {}'.format(ids))
     aliases = []
     for i in ids:
         handle = Entrez.epost(db="gene", id=i)
@@ -265,16 +362,16 @@ def get_gene_aliases(gene):
         other_aliases = annotations['Document' +
                                     'SummarySet']['Document' +
                                                   'Summary'][0]['OtherAliases']
-        print('other aliases are: {}'.format(other_aliases))
-        aliases.append(other_aliases)
+        other_aliases = other_aliases.split(', ')
+        aliases.extend(other_aliases)
     return(aliases)
 
 
 def expand_genes(topics):
-    expanded = []
+    expanded = {}
     for topic in topics:
-        for gene in [y.split(' ')[0] for y
-                     in [x for x in topic[1].split(', ')]]:
-            expanded_gene_names = [gene] + get_gene_aliases(gene)
-        expanded.append(expanded_gene_names)
+        for gene in topic[1].split(', '):
+            simple_gene_name = gene.split(' ')[0]
+            expanded_gene_names = [simple_gene_name] + get_gene_aliases(gene)
+            expanded[gene] = expanded_gene_names
     return(expanded)
