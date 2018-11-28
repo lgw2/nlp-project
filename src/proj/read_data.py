@@ -259,10 +259,10 @@ def print_trial(trials, trial_name):
 
 
 def import_ground_truth():
-    file = "../../data/ground_truth.txt"
-    data = pd.read_csv(file, sep=' ', header=None,
-                       names=['topic', '1', 'trial', '3'])
-    return(data[['topic', 'trial']])
+    file = '../../data/clinical_trials.judgments.2017.csv'
+    data = pd.read_csv(file)
+    data = data[data['pm_rel_desc'] != 'Not PM']
+    return(data)
 
 
 
