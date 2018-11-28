@@ -272,8 +272,10 @@ def generate_ordered_trials(baseline, ground_truth, topic):
     scores = [x for x in scores]
     scores.sort(reverse=True)
     for score in scores:
+        print(score)
         trials_at_score = [x for x in baseline[baseline[topic-1] ==\
                   score]['trial']]
+        print(trials_at_score)
         trials_list.extend(trials_at_score)
         if len(trials_list) >= 15:
             break
