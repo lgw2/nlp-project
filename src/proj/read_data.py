@@ -261,7 +261,16 @@ def print_trial(trials, trial_name):
 def import_ground_truth():
     file = '../../data/clinical_trials.judgments.2017.csv'
     data = pd.read_csv(file)
+    print(data.shape[0])
     data = data[data['pm_rel_desc'] != 'Not PM']
+    print(data.shape[0])
+    data = data[data['demographics_desc'] == 'Matches']
+    print(data.shape[0])
+    data = data[(data['other_desc'] == 'Not Discussed') |
+                         (data['other_desc'] == 'Matches')]
+    print(data.shape[0])
+    data = data[data['disease_desc'] != 'Not Disease']
+    print(data.shape[0])
     return(data)
 
 
