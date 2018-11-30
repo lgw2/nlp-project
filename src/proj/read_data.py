@@ -317,7 +317,7 @@ def find_num_correct_trials(trials_list, filtered_ground_truth):
     return(len(set(trials_list).intersection(set(filtered_ground_truth))))
 
 
-def generate_baseline_data(baseline, ground_truth):
+def generate_result_data(baseline, ground_truth):
     topics = []
     true_positives_5 = []
     false_positives_5 = []
