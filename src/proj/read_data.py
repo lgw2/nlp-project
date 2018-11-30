@@ -202,7 +202,7 @@ def compute_baseline_scores(trials, topics):
                 score = 0
             scores.append(score)
         trials_rows.append(scores)
-    df = d.DataFrame(trials_rows)
+    df = pd.DataFrame(trials_rows)
     df['trial'] = trials['trial_name']
     return(df)
 
@@ -261,16 +261,30 @@ def print_trial(trials, trial_name):
 def import_ground_truth():
     file = '../../data/clinical_trials.judgments.2017.csv'
     data = pd.read_csv(file)
-    print(data.shape[0])
+    print("All data: {}".format(data.shape[0]))
     data = data[data['pm_rel_desc'] != 'Not PM']
-    print(data.shape[0])
+#    print('After removing not PM: {}'.format(data.shape[0]))
     data = data[data['demographics_desc'] == 'Matches']
-    print(data.shape[0])
+    print('after removing demographic mismatches: {}'.format(data.shape[0]))
     data = data[(data['other_desc'] == 'Not Discussed') |
                          (data['other_desc'] == 'Matches')]
-    print(data.shape[0])
+    print('after removing other mismatches: {}'.format(data.shape[0]))
     data = data[data['disease_desc'] != 'Not Disease']
-    print(data.shape[0])
+    print('after removing disease mismatches: {}'.format(data.shape[0]))
+    gene_match = []
+    for row_idx in range(data.shape[0]):
+        row = data.iloc[row_idx]
+        match = False
+        for gene in ['1', '2', '3']:
+            col_name = 'gene' + gene + '_annotation_desc'
+            if row[col_name] in ['Exact',
+                                 'Missing Variant',
+                                 'Different Variant']:
+                match = True
+        gene_match.append(match)
+    data['gene_match'] = gene_match
+    data = data[data['gene_match']]
+    print('after removing gene mismatches: {}'.format(data.shape[0]))
     return(data)
 
 
@@ -315,7 +329,8 @@ def generate_baseline_data(baseline, ground_truth):
         topics.append(topic)
         print(topic)
         filtered_ground_truth =\
-               ground_truth[ground_truth['topic'] == topic]['trial']
+               ground_truth[ground_truth['trec_topic_number'] ==
+               topic]['trec_doc_id']
         trials = generate_ordered_trials(baseline, ground_truth, topic)
         first_5 = trials[:5]
         first_10 = trials[:10]
