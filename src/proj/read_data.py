@@ -162,6 +162,14 @@ def match_expanded_genes(genes, expanded_gene_names, trial, score, match):
     return(score, match)
 
 
+def match_expanded_diseases(expanded_diseases, trial):
+    score = 0
+    for disease in expanded_diseases:
+        for expanded_name in expanded_diseases[disease]:
+            score = score + trial.count(expanded_name)
+    return(score)
+
+
 def match_other_conds(other_conditions, trial_exclusion, match):
     if other_conditions != ['none']:
         for cond in other_conditions:
@@ -207,7 +215,8 @@ def compute_baseline_scores(trials, topics):
     return(df)
 
 
-def compute_expanded_scores(trials, topics, expanded_gene_names):
+def compute_expanded_scores(trials, topics, expanded_gene_names,
+                            expanded_disease_names):
     """
     Given a set of trials and topics, return a dataset giving score based
     number of times of times EXPANDED
