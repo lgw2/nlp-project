@@ -358,7 +358,7 @@ def generate_result_data(baseline, ground_truth):
                          }))
 
 
-def compute_baseline_evaluation(baseline_data, ground_truth):
+def compute_result_evaluation(baseline_data, ground_truth):
     num_topics = 29
     prec5 = baseline_data['true_positives_5'].sum()/(5*num_topics)
     prec10 = baseline_data['true_positives_10'].sum()/(10*num_topics)
@@ -400,4 +400,26 @@ def expand_genes(topics):
             simple_gene_name = gene.split(' ')[0]
             expanded_gene_names = [simple_gene_name] + get_gene_aliases(gene)
             expanded[gene] = expanded_gene_names
+    return(expanded)
+
+
+def import_doid():
+    doid = pd.read_csv('../../data/DOID.csv')
+    return(doid)
+
+def expand_diseases(topics, doid):
+    expanded = {}
+    for topic in topics:
+        disease = topic[0]
+        print(disease)
+        synonyms = doid[doid['Preferred Label'] == disease]['Synonyms']
+        if synonyms.shape[0] > 0:
+            if not synonyms.isnull().values[0]:
+                syn_list = synonyms.values[0]
+                syn_list = syn_list.split('|')
+                expanded[disease] = [disease] + syn_list
+            else:
+                expanded[disease] = [disease]
+        else:
+            expanded[disease] = [disease]
     return(expanded)
