@@ -231,18 +231,18 @@ def compute_expanded_scores(trials, topics, expanded_gene_names,
         age_to = get_trial_age_to(trial)
         trial_exclusion = get_trial_exclusion(trial)
         for topic in topics:
-            disease = get_disease(topic)
             genes = get_genes(topic)
             age, gender = get_demographic(topic)
             other_conditions = get_other_conditions(topic)
-            score = trial.count(disease)
+            score = match_expanded_diseases(expanded_disease_names, trial)
             match = True
             match = match_gender(gender, trial_gender, match)
             match = match_age(age, age_from, age_to, match)
             if score == 0:
                 match = False
-            score, match = match_expanded_genes(genes, expanded_gene_names,
-                                                trial, score, match)
+            #score, match = match_expanded_genes(genes, expanded_gene_names,
+            #                                    trial, score, match)
+            score, match = match_genes(genes, trial, score, match)
             match = match_other_conds(other_conditions, trial_exclusion,
                                       match)
             if match is False:
